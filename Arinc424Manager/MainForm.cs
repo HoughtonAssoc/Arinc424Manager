@@ -49,6 +49,16 @@ namespace Arinc424Manager
 
         public class Line
         {
+           public enum RecordType
+            {
+                PrimaryWithoutContinuationFollowing,
+                PrimaryWithContinuationFollowing,
+                Continuation
+            }
+
+            public RecordType MyRecordType { get; set; }
+          //  public List<Line> Children = new List<Line>();
+
             /// <summary>
             /// Split contents of the line
             /// </summary>
@@ -73,18 +83,42 @@ namespace Arinc424Manager
             /// Constructor
             /// </summary>
             /// <param name="source">Source string</param>
+            /// <param name="previousContinuationNumber">Do I really need that?</param>
             public Line(string source)
             {
                 Source = source;
                 int layoutFirstIndex = 4; // Layout starting symbol index in the source line 
                 int layoutSecondIndex = source[5] != ' ' ? 5 : 12;   // Layout ending symbol index in the source line
-                Layout = source[layoutFirstIndex].ToString() + source[layoutSecondIndex];
-                //  Layout = source.Substring(layoutBeginIndex, layoutEndIndex - layoutBeginIndex + 1); // Getting the layout
-                if (PartitionMap.ContainsKey(Layout.Replace(" ", ""))) // Checking if such layout exists in the partition map
+                Layout = (source[layoutFirstIndex].ToString() + source[layoutSecondIndex]).Replace(" ", ""); // Getting the layout
+                
+                if (PartitionMap.ContainsKey(Layout)) // Checking if such layout exists in the partition map
                     try
                     {
                         Program.mainForm.Status = "Loading data from file...";
-                        List<TableMapper> partition = PartitionMap[Layout.Replace(" ", "")]; // Setting the table mapper list. It will be needed to fill the table according to the specified layout
+
+
+                        int continuationNoLocation = Program.mainForm.GetInfoLocationInMapperList(PartitionMap[Layout],"cnum"); //Program.mainForm.GetInfoLocationInMapperList(PartitionMap[Layout],"ctype");
+
+
+                        char continuationType;
+                        if (continuationNoLocation != -1 && Char.IsLetterOrDigit(source[continuationNoLocation]))
+                        {
+                            MyRecordType = GetRecordType(source[continuationNoLocation]);
+                            continuationType = source[continuationNoLocation + 1];
+                        }
+                        else
+                        {
+                            MyRecordType = RecordType.PrimaryWithoutContinuationFollowing;
+                            continuationType = '\0';
+                        }
+
+                        List<TableMapper> partition; 
+                       
+                        partition = (MyRecordType == RecordType.Continuation &&
+                                        PartitionMap.ContainsKey(String.Format("{0}_{1}", Layout, continuationType)))? // Setting the table mapper list. It will be needed to fill the table according to the specified layout
+                            PartitionMap[String.Format("{0}_{1}",Layout,continuationType)]: 
+                            PartitionMap[Layout]; 
+                        
 
                         for (int i = 0; i < partition.Count - 1; i++)
                         {
@@ -97,11 +131,25 @@ namespace Arinc424Manager
                     }
                     catch (Exception ex)
                     {
-                        throw new Exception(ex.Message + " (" + Layout.Replace(" ", "") + ")"); // Also adding the layout name to the exception message
-                    }
+                        throw new Exception(ex.Message + " (" + Layout + ")"); // Also adding the layout name to the exception message
+                    }                   
                 else
                 {
-                    Program.mainForm.Status = "No layout partition template found for: " + Layout.Replace(" ", "");
+                    Program.mainForm.Status = "No layout partition template found for: " + Layout;
+                }
+            }
+
+           private RecordType GetRecordType(char continuationNo)
+            {
+               
+                switch (continuationNo)
+                {
+                    case '0':
+                        return RecordType.PrimaryWithoutContinuationFollowing; //No continuation records following
+                    case '1':
+                        return RecordType.PrimaryWithContinuationFollowing; //Several continuation records following
+                    default:
+                        return RecordType.Continuation; //Number of the continuation record
                 }
             }
 
@@ -111,15 +159,32 @@ namespace Arinc424Manager
             }
         }
 
+        public int GetInfoLocationInMapperList(List<TableMapper> mapperList, string info)
+        {
+            for (int i = 0; i < mapperList.Count; i++)
+            {
+                if (mapperList[i].Info==info)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
         public class TableMapper
         {
+            public string Info { get; set; }
             public int Index { get; set; }
             public string Name { get; set; }
-            public TableMapper(int index, string name)
+            public TableMapper(int index, string name, string info)
             {
                 Index = index;
                 Name = name;
+                Info = info;
             }
+
+            public TableMapper(int index, string name) : this(index, name, "") { }
+
         }
 
         public static Dictionary<string, List<TableMapper>> PartitionMap;
@@ -164,11 +229,15 @@ namespace Arinc424Manager
                     List<TableMapper> values = new List<TableMapper>();
                     for (int j = 0; j < split.Length; j++)
                     {
+                        string info = (split[j].Contains('[') && split[j].Contains(']')) ?
+                            split[j].Split(new char[] { '[', ']' })[1] : "";
+
                         string tableName = split[j].Split(new char[] { '(', ')' })[1];
+                        
                         int parsedValue;
                         if (int.TryParse(split[j].Split(new char[] { '(', ')' })[2], out parsedValue))
                         {
-                            values.Add(new TableMapper(parsedValue, tableName));
+                            values.Add(new TableMapper(parsedValue, tableName, info));
                         }
                     }
                     result[layout] = values;
