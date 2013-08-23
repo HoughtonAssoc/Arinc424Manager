@@ -97,14 +97,24 @@ namespace Arinc424Manager
                         Program.mainForm.Status = "Loading data from file...";
 
 
-                        int continuationNoLocation = Program.mainForm.GetInfoLocationInMapperList(PartitionMap[Layout],"cnum"); //Program.mainForm.GetInfoLocationInMapperList(PartitionMap[Layout],"ctype");
+                        int continuationIndexLocation = Program.mainForm.GetInfoLocationInMapperList(PartitionMap[Layout],"cnum");
+                        int continuationIndexTypeLocation =  Program.mainForm.GetInfoLocationInMapperList(PartitionMap[Layout],"cnum_type");
+
 
 
                         char continuationType;
-                        if (continuationNoLocation != -1 && Char.IsLetterOrDigit(source[continuationNoLocation]))
+
+
+                        if (continuationIndexTypeLocation != -1)
                         {
-                            MyRecordType = GetRecordType(source[continuationNoLocation]);
-                            continuationType = source[continuationNoLocation + 1];
+                            MyRecordType = GetRecordType(source[continuationIndexLocation]);
+                            continuationType = source[continuationIndexLocation + 1];
+                        }
+                        else
+                        if (continuationIndexLocation != -1)
+                        {
+                            MyRecordType = GetRecordType(source[continuationIndexLocation]);
+                            continuationType = '\0';
                         }
                         else
                         {
