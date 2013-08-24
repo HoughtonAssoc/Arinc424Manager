@@ -49,7 +49,7 @@ namespace Arinc424Manager
 
         public class Line
         {
-           public enum RecordType
+            public enum RecordType
             {
                 PrimaryWithoutContinuationFollowing,
                 PrimaryWithContinuationFollowing,
@@ -57,7 +57,7 @@ namespace Arinc424Manager
             }
 
             public RecordType MyRecordType { get; set; }
-          //  public List<Line> Children = new List<Line>();
+            //  public List<Line> Children = new List<Line>();
 
             /// <summary>
             /// Split contents of the line
@@ -90,17 +90,17 @@ namespace Arinc424Manager
                 int layoutFirstIndex = 4; // Layout starting symbol index in the source line 
                 int layoutSecondIndex = source[5] != ' ' ? 5 : 12;   // Layout ending symbol index in the source line
                 Layout = (source[layoutFirstIndex].ToString() + source[layoutSecondIndex]).Replace(" ", ""); // Getting the layout
-                
-               
+
+
 
                 if (PartitionMap.ContainsKey(Layout)) // Checking if such layout exists in the partition map
-                   // try
+                    try
                     {
                         Program.mainForm.Status = "Loading data from file...";
 
 
-                        int continuationIndexLocation = Program.mainForm.GetInfoLocationInMapperList(PartitionMap[Layout],"cnum");
-                        int continuationIndexTypeLocation =  Program.mainForm.GetInfoLocationInMapperList(PartitionMap[Layout],"cnum_type");
+                        int continuationIndexLocation = Program.mainForm.GetInfoLocationInMapperList(PartitionMap[Layout], "cnum");
+                        int continuationIndexTypeLocation = Program.mainForm.GetInfoLocationInMapperList(PartitionMap[Layout], "cnum_type");
 
 
 
@@ -113,17 +113,17 @@ namespace Arinc424Manager
                             continuationType = source[continuationIndexLocation + 1];
                         }
                         else
-                        if (continuationIndexLocation != -1)
-                        {
-                            MyRecordType = GetRecordType(source[continuationIndexLocation]);
-                            continuationType = 'A'; 
-                        }
-                        else
-                        {
-                            MyRecordType = RecordType.PrimaryWithoutContinuationFollowing;
-                            continuationType = '\0';
-                        }
-                         //Test feature
+                            if (continuationIndexLocation != -1)
+                            {
+                                MyRecordType = GetRecordType(source[continuationIndexLocation]);
+                                continuationType = 'A';
+                            }
+                            else
+                            {
+                                MyRecordType = RecordType.PrimaryWithoutContinuationFollowing;
+                                continuationType = '\0';
+                            }
+
                         if (MyRecordType == RecordType.Continuation)// && PartitionMap.ContainsKey(Layout + "_" + continuationType))
                         {
                             if (PartitionMap.ContainsKey(Layout + "_" + continuationType))
@@ -133,43 +133,39 @@ namespace Arinc424Manager
 
                             }
                             else
-                                Console.WriteLine(  Layout += "_" + continuationType);
+                                Console.WriteLine(Layout += "_" + continuationType);
                         }
-                        
-                        List<TableMapper> partition; 
-                       
-                        partition = (MyRecordType == RecordType.Continuation &&
-                                        PartitionMap.ContainsKey(String.Format("{0}_{1}", Layout, continuationType)))? // Setting the table mapper list. It will be needed to fill the table according to the specified layout
-                            PartitionMap[String.Format("{0}_{1}",Layout,continuationType)]: 
-                            PartitionMap[Layout];
 
-                        if (partition.Count>0)
+                        List<TableMapper> partition = PartitionMap[Layout]; ;
+
+
+                        if (partition.Count > 0)
                         {
-                         
-                        for (int i = 0; i < partition.Count - 1; i++)
-                        {
-                            Contents.Add(source.Substring(partition[i].Index, partition[i + 1].Index - partition[i].Index)); // Getting the content according to the partition map
-                            ColumnNames.Add(partition[i].Name);  // Setting the column names for the line
-                        }
-                        Contents[0] += MyRecordType.ToString();
-                        Contents.Add(source.Substring(partition[partition.Count - 1].Index)); // Adding the last content element
-                        ColumnNames.Add(partition[partition.Count - 1].Name); // Adding the last column name element
+
+                            for (int i = 0; i < partition.Count - 2; i++)
+                            {
+                                Contents.Add(source.Substring(partition[i].Index, partition[i + 1].Index - partition[i].Index)); // Getting the content according to the partition map
+                                ColumnNames.Add(partition[i].Name);  // Setting the column names for the line
+                            }
+
+                            Contents.Add(source.Substring(partition[partition.Count - 1].Index)); // Adding the last content element
+                            ColumnNames.Add(partition[partition.Count - 1].Name); // Adding the last column name element
 
                         }
-                            // }
-               //     catch (Exception ex)
-                   // {
-                 //       throw new Exception(ex.Message + " (" + Layout + ")"); // Also adding the layout name to the exception message
-                    }                   
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new Exception(ex.Message + " (" + Layout + ")"); // Also adding the layout name to the exception message
+                    }
                 else
                 {
                     Program.mainForm.Status = "No layout partition template found for: " + Layout;
                 }
             }
 
-           private RecordType GetRecordType(char continuationNo)
+            private RecordType GetRecordType(char continuationNo)
             {
-               
+
                 switch (continuationNo)
                 {
                     case '0':
@@ -191,9 +187,9 @@ namespace Arinc424Manager
         {
             for (int i = 0; i < mapperList.Count; i++)
             {
-                if (mapperList[i].Info==info)
+                if (mapperList[i].Info == info)
                 {
-                    return i;
+                    return mapperList[i].Index;
                 }
             }
             return -1;
@@ -261,7 +257,7 @@ namespace Arinc424Manager
                             split[j].Split(new char[] { '[', ']' })[1] : "";
 
                         string tableName = split[j].Split(new char[] { '(', ')' })[1];
-                        
+
                         int parsedValue;
                         if (int.TryParse(split[j].Split(new char[] { '(', ')' })[2], out parsedValue))
                         {
@@ -290,7 +286,7 @@ namespace Arinc424Manager
                 LineMap.Clear();
                 listBox1.Items.Clear();
                 listView1.Items.Clear();
-            //    try
+                try
                 {
                     this.InvokeEx(() => toolStripProgressBar1.Maximum = lines.Count);
 
@@ -305,7 +301,7 @@ namespace Arinc424Manager
                  // 
                   {
                       this.InvokeEx(() => toolStripProgressBar1.Value = 0);
-                      
+
                       foreach (var line in lines)
                       {
                           Status = "Filling UI Fields...";
@@ -317,11 +313,10 @@ namespace Arinc424Manager
                       Status = "Idle";
                       //MessageBox.Show("Done");
                   });
-           //     }
-          //      catch (Exception ex)
-            //    {
-            //        MessageBox.Show(ex.Message.ToString());
-//
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message.ToString());
                 }
             }
         }
@@ -336,12 +331,10 @@ namespace Arinc424Manager
 
             this.InvokeEx(() => toolStripProgressBar1.Maximum = array.Length);
 
-
-            //this.InvokeEx(() => { toolStripProgressBar1.Maximum = array.Length; });
             for (int i = 0; i < array.Length; i++)
             {
                 this.InvokeEx(() => toolStripProgressBar1.PerformStep());
-               try
+                try
                 {
                     Line l = new Line(array[i]);
                     if (!LineMap.ContainsKey(l.Layout)) LineMap.Add(l.Layout, new List<Line>());
@@ -423,7 +416,7 @@ namespace Arinc424Manager
 
         private void statisticsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-           
+
         }
 
         private void SaveToCsv()
@@ -437,14 +430,14 @@ namespace Arinc424Manager
                 int errorCounter = 0;
                 foreach (var key in LineMap.Keys)
                 {
-                    
+
                     string savePath = Path.Combine(fbd.SelectedPath, key + ".csv");
                     using (StreamWriter saveStream = new StreamWriter(savePath))
                     {
-                       
+
                         Status = "Saving: " + savePath;
                         report += string.Format("Saving {0} : ", key);
-                        if (PartitionMap.ContainsKey(key.Replace(" ","")))
+                        if (PartitionMap.ContainsKey(key.Replace(" ", "")))
                         {
                             saveStream.WriteLine(string.Join(";",
                                 (from mapper in PartitionMap[key.Replace(" ", "")]
@@ -467,7 +460,7 @@ namespace Arinc424Manager
                     File.WriteAllText(Path.Combine(fbd.SelectedPath, "log.txt"), report);
                 }
                 this.InvokeEx(() => { toolStripProgressBar1.Value = 0; });
-                string msg = "Saved" + (errorCounter==0?" successfully!":" (with " + errorCounter + " errors)!\r\nMore info in log.txt");
+                string msg = "Saved" + (errorCounter == 0 ? " successfully!" : " (with " + errorCounter + " errors)!\r\nMore info in log.txt");
                 Status = "Idle";
                 MessageBox.Show(msg);
             }
