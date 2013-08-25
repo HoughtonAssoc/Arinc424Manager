@@ -106,7 +106,6 @@ namespace Arinc424Manager
 
                         char continuationType;
 
-
                         if (continuationIndexTypeLocation != -1)
                         {
                             MyRecordType = GetRecordType(source[continuationIndexLocation]);
@@ -124,7 +123,7 @@ namespace Arinc424Manager
                                 continuationType = '\0';
                             }
 
-                        if (MyRecordType == RecordType.Continuation)// && PartitionMap.ContainsKey(Layout + "_" + continuationType))
+                        if (MyRecordType == RecordType.Continuation)
                         {
                             if (PartitionMap.ContainsKey(Layout + "_" + continuationType))
                             {
@@ -138,11 +137,10 @@ namespace Arinc424Manager
 
                         List<TableMapper> partition = PartitionMap[Layout]; ;
 
-
                         if (partition.Count > 0)
                         {
 
-                            for (int i = 0; i < partition.Count - 2; i++)
+                            for (int i = 0; i < partition.Count - 1; i++)
                             {
                                 Contents.Add(source.Substring(partition[i].Index, partition[i + 1].Index - partition[i].Index)); // Getting the content according to the partition map
                                 ColumnNames.Add(partition[i].Name);  // Setting the column names for the line
