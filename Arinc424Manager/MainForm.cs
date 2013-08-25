@@ -55,6 +55,7 @@ namespace Arinc424Manager
                 PrimaryWithContinuationFollowing,
                 Continuation
             }
+            public List<Line> Children = new List<Line>();
 
             public RecordType MyRecordType { get; set; }
             //  public List<Line> Children = new List<Line>();
@@ -79,12 +80,12 @@ namespace Arinc424Manager
             /// </summary>
             public string Source { get; set; }
 
+            public Line(string source) : this(source, null) { }
             /// <summary>
             /// Constructor
             /// </summary>
             /// <param name="source">Source string</param>
-            /// <param name="previousContinuationNumber">Do I really need that?</param>
-            public Line(string source)
+            public Line(string source, Line parent)
             {
                 Source = source;
                 int layoutFirstIndex = 4; // Layout starting symbol index in the source line 
@@ -125,6 +126,9 @@ namespace Arinc424Manager
 
                         if (MyRecordType == RecordType.Continuation)
                         {
+                            if (parent != null)
+                                parent.Children.Add(this);
+
                             if (PartitionMap.ContainsKey(Layout + "_" + continuationType))
                             {
 
@@ -238,17 +242,21 @@ namespace Arinc424Manager
         Dictionary<string, List<TableMapper>> FillPartitionMap(string partitionFilePath)
         {
             Dictionary<string, List<TableMapper>> result = new Dictionary<string, List<TableMapper>>();
+            int currentLine = 0;
             try
             {
                 string[] partition = File.ReadAllLines(partitionFilePath, Encoding.GetEncoding(1251));
                 for (int i = 0; i < partition.Length; i++)
                 {
+                    currentLine = i+1;
                     var item = partition[i];
                     string layout = item.Substring(0, item.IndexOf(":")).Replace(" ", "");
                     item = item.Remove(0, item.IndexOf(":") + 1);
 
                     string[] split = item.Split((";").ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
                     List<TableMapper> values = new List<TableMapper>();
+
+                    int prevParsedValue = 0; //Previous parsed value is saved to check if the next one is actually higher (otherwise error)
                     for (int j = 0; j < split.Length; j++)
                     {
                         string info = (split[j].Contains('[') && split[j].Contains(']')) ?
@@ -260,6 +268,17 @@ namespace Arinc424Manager
                         if (int.TryParse(split[j].Split(new char[] { '(', ')' })[2], out parsedValue))
                         {
                             values.Add(new TableMapper(parsedValue, tableName, info));
+
+
+                            if (prevParsedValue > parsedValue)
+                            {
+                                throw new IOException();
+                            }
+                            else
+                            {
+                                prevParsedValue = parsedValue;
+                            }
+
                         }
                     }
                     result[layout] = values;
@@ -269,7 +288,7 @@ namespace Arinc424Manager
             }
             catch
             {
-                throw new IOException("Error loading partition file.");
+                throw new IOException("Error loading partition file. Line: " + currentLine);
             }
         }
 
@@ -329,12 +348,17 @@ namespace Arinc424Manager
 
             this.InvokeEx(() => toolStripProgressBar1.Maximum = array.Length);
 
+            Line lastPrimaryLine=null;
             for (int i = 0; i < array.Length; i++)
             {
                 this.InvokeEx(() => toolStripProgressBar1.PerformStep());
                 try
                 {
-                    Line l = new Line(array[i]);
+                    Line l = new Line(array[i], lastPrimaryLine);
+                    
+                    if (l.MyRecordType == Line.RecordType.PrimaryWithContinuationFollowing)
+                        lastPrimaryLine = l;
+
                     if (!LineMap.ContainsKey(l.Layout)) LineMap.Add(l.Layout, new List<Line>());
                     LineMap[l.Layout].Add(l);
                     newList.Add(l);
@@ -395,25 +419,34 @@ namespace Arinc424Manager
                 this.InvokeEx(() => { toolStripProgressBar1.Maximum = lines.Count; });
                 foreach (var key in LineMap.Keys)
                 {
-                    string savePath = Path.Combine(fbd.SelectedPath, key + ".txt");
-                    using (StreamWriter saveStream = new StreamWriter(savePath))
+                    if (!key.Contains("_"))
                     {
-                        Status = "Saving: " + savePath;
-                        foreach (Line line in LineMap[key])
+                        string savePath = Path.Combine(fbd.SelectedPath, key + ".txt");
+                        using (StreamWriter saveStream = new StreamWriter(savePath))
                         {
-                            saveStream.WriteLine(line.ToString());
-                            this.InvokeEx(() => { toolStripProgressBar1.PerformStep(); });
+                            Status = "Saving: " + savePath;
+                            foreach (Line line in LineMap[key])
+                            {
+                                saveStream.WriteLine(line.ToString());
+                                if (line.Children.Count>0)
+                                {
+                                    foreach (var child in line.Children)
+                                    {
+                                        saveStream.WriteLine(child.ToString());
+                                        this.InvokeEx(() => { toolStripProgressBar1.PerformStep(); });
+                                    }
+                                }
+
+                                this.InvokeEx(() => { toolStripProgressBar1.PerformStep(); });
+
+                            }
                         }
                     }
-                }
+                 }
+                
                 this.InvokeEx(() => { toolStripProgressBar1.Value = 0; });
                 MessageBox.Show("Saved!");
             }
-
-        }
-
-        private void statisticsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
 
         }
 
