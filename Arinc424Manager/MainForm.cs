@@ -137,6 +137,7 @@ namespace Arinc424Manager
                             }
                             else
                                 Console.WriteLine(Layout += "_" + continuationType);
+
                         }
 
                         List<TableMapper> partition = PartitionMap[Layout]; ;
@@ -286,15 +287,14 @@ namespace Arinc424Manager
 
                 return result;
             }
-            catch
+            catch (Exception ex)
             {
-                throw new IOException("Error loading partition file. Line: " + currentLine);
+                throw new IOException("Error loading partition file. Line: " + currentLine + "\n" + ex.Message);
             }
         }
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
             OpenFileDialog ofd = new OpenFileDialog();
             ofd.Filter = "All files (*.*) | *.*";
             if (ofd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
@@ -310,12 +310,6 @@ namespace Arinc424Manager
                     this.InvokeEx(() => toolStripProgressBar1.Value = 0);
                     Status = "Loading data from file...";
                     Task.Factory.StartNew(() => FillLines()).ContinueWith((t) =>
-
-                 //   Thread oThread = new Thread(new ThreadStart(FillLines));
-                  //  oThread.Start();
-                  //   oThread.Join();
-
-                 // 
                   {
                       this.InvokeEx(() => toolStripProgressBar1.Value = 0);
 
@@ -328,7 +322,6 @@ namespace Arinc424Manager
 
                       this.InvokeEx(() => toolStripProgressBar1.Value = 0);
                       Status = "Idle";
-                      //MessageBox.Show("Done");
                   });
                 }
                 catch (Exception ex)
@@ -408,7 +401,6 @@ namespace Arinc424Manager
         {
             this.Close();
         }
-
 
         private void saveInGroupsToolStripMenuItem_Click(object sender, EventArgs e)
         {
